@@ -398,9 +398,8 @@ const app = {
             
             document.getElementById('sim-clock-display').textContent = formatted;
 
-            // Re-render components that depend on simulated clock progression
-            this.renderDashboard();
-            this.renderOperationsConsole();
+            // Do not re-render active panels on every tick to prevent 
+            // dropdowns/input fields from auto-closing while user is typing.
         });
 
         // Setup alert response triggers
