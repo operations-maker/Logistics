@@ -1,0 +1,955 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Logistics Operations Control System (LCOS)</title>
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div id="app-container" style="display: none;">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="logo-container">
+                <div class="logo-icon">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                        <line x1="8" y1="21" x2="16" y2="21"></line>
+                        <line x1="12" y1="17" x2="12" y2="21"></line>
+                    </svg>
+                </div>
+                <div class="logo-text">
+                    <h1>LCOS</h1>
+                    <span>Admin Operations</span>
+                </div>
+            </div>
+            
+            <nav style="flex-grow: 1;">
+                <ul class="nav-links">
+                    <li class="nav-item active" data-tab="dashboard">
+                        <a href="#">
+                            <svg><path d="M3 9l9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"></path><polyline points="9 22 9 12 15 12 15 22"></polyline></svg>
+                            Dashboard
+                        </a>
+                    </li>
+                    <li class="nav-item" data-tab="operations">
+                        <a href="#">
+                            <svg><polygon points="12 2 2 7 12 12 22 7 12 2"></polygon><polyline points="2 17 12 22 22 17"></polyline><polyline points="2 12 12 17 22 12"></polyline></svg>
+                            Operations Console
+                        </a>
+                    </li>
+                    <li class="nav-item" data-tab="trips">
+                        <a href="#">
+                            <svg><rect x="1" y="3" width="15" height="13" rx="2" ry="2"></rect><polygon points="16 8 20 8 23 11 23 16 16 16 16 8"></polygon><circle cx="5.5" cy="18.5" r="2.5"></circle><circle cx="18.5" cy="18.5" r="2.5"></circle></svg>
+                            Trips Tracker
+                        </a>
+                    </li>
+                    <li class="nav-item" data-tab="inventory">
+                        <a href="#">
+                            <svg><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                            Inventory & Stock
+                        </a>
+                    </li>
+                    <li class="nav-item" data-tab="directory">
+                        <a href="#">
+                            <svg><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+                            LCOS Directory
+                        </a>
+                    </li>
+                    <li class="nav-item" data-tab="calllogs">
+                        <a href="#">
+                            <svg><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                            Call Logs
+                        </a>
+                    </li>
+                </ul>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <div class="admin-profile">
+                    <div class="admin-avatar">ADM</div>
+                    <div class="admin-info">
+                        <h4>Admin Control</h4>
+                        <p>Operations HQ</p>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- Main Panel -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="top-header">
+                <div class="header-title">
+                    <h2 id="view-title">Dashboard</h2>
+                </div>
+                <div class="header-actions">
+                    <div id="active-role-indicator">
+                        <!-- Dynamic active role badge loaded here -->
+                    </div>
+                    <button class="btn-logout" id="btn-logout-action" title="Log Out from active session">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+                        Logout
+                    </button>
+                    <div class="system-clock">
+                        <svg class="clock-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                        <span id="sim-clock-display">04 Aug 2026, 08:00 AM</span>
+                    </div>
+                    <button class="btn btn-primary" id="btn-quick-trip">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        New Trip Dispatch
+                    </button>
+                    <button class="btn btn-secondary" id="btn-toggle-sim" title="Toggle Simulator Panel">
+                        <span>Simulator Panel</span>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Alerts Banner Ticker -->
+            <div class="alerts-banner-container" id="alerts-banner" style="display: none;">
+                <div class="alert-label">Alert</div>
+                <div class="alerts-ticker-wrap">
+                    <div class="alerts-ticker" id="alerts-ticker-content">
+                        <!-- Ticker items inject here -->
+                    </div>
+                </div>
+                <button class="btn btn-secondary" style="padding: 0.2rem 0.5rem; font-size: 0.75rem;" onclick="app.showDashboardAlerts()">View Alerts</button>
+            </div>
+
+            <!-- TABS CONTAINER -->
+            <div id="tabs-container">
+                
+                <!-- 1. DASHBOARD VIEW -->
+                <div class="tab-content active" id="tab-dashboard">
+                    <!-- Stats Grid -->
+                    <div class="stats-grid">
+                        <div class="glass-card stat-card" style="--accent-color: var(--color-transit)">
+                            <div class="stat-header">
+                                <span>In Transit</span>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18.5" cy="18.5" r="2.5"></circle><circle cx="5.5" cy="18.5" r="2.5"></circle><path d="M16 18.5H7.5"></path><path d="M16 8.5H12"></path><path d="M16 13.5H9.5"></path></svg>
+                            </div>
+                            <div class="stat-value" id="stat-transit">0</div>
+                            <div class="stat-desc">Active trucks on highway</div>
+                        </div>
+                        <div class="glass-card stat-card" style="--accent-color: var(--color-warning)">
+                            <div class="stat-header">
+                                <span>Delayed / Stopped</span>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                            </div>
+                            <div class="stat-value text-warning" id="stat-delayed">0</div>
+                            <div class="stat-desc">Awaiting check-in update</div>
+                        </div>
+                        <div class="glass-card stat-card" style="--accent-color: var(--color-danger)">
+                            <div class="stat-header">
+                                <span>Active Alerts</span>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"></path><line x1="12" y1="9" x2="12" y2="13"></line><line x1="12" y1="17" x2="12.01" y2="17"></line></svg>
+                            </div>
+                            <div class="stat-value text-danger" id="stat-alerts">0</div>
+                            <div class="stat-desc">Require immediate action</div>
+                        </div>
+                        <div class="glass-card stat-card" style="--accent-color: var(--color-success)">
+                            <div class="stat-header">
+                                <span>Delivered Today</span>
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            </div>
+                            <div class="stat-value text-success" id="stat-delivered">0</div>
+                            <div class="stat-desc">Closed trip receipts logged</div>
+                        </div>
+                    </div>
+
+                    <!-- Map and Side Panels -->
+                    <div class="analytics-grid">
+                        <!-- Left Panel: Regional Map -->
+                        <div class="glass-card flex" style="flex-direction:column;">
+                            <div class="card-title">
+                                <span>Tamil Nadu - Logistics Network Map</span>
+                                <span style="font-size: 0.8rem; color: var(--text-muted);">14 District Branches</span>
+                            </div>
+                            <div class="map-visualizer">
+                                <div class="map-tooltip" id="map-tip">Chennai Branch</div>
+                                <svg class="map-svg-container" id="tn-map-svg" viewBox="0 0 100 100">
+                                    <!-- Dynamic path connections and node dots will be pre-coded in app.js -->
+                                </svg>
+                            </div>
+                        </div>
+
+                        <!-- Right Panel: Delays & Leaderboard -->
+                        <div style="display:flex; flex-direction:column; gap: 1.25rem;">
+                            <!-- Active Alerts Box -->
+                            <div class="glass-card" style="flex-shrink:0;">
+                                <div class="card-title text-danger">🚨 Operations Alerts Feed</div>
+                                <div id="alerts-feed-content" style="display:flex; flex-direction:column; gap:0.5rem; max-height: 180px; overflow-y: auto;">
+                                    <!-- Active Alerts will inject here -->
+                                </div>
+                            </div>
+                            
+                            <!-- Supervisor Requests Box (Manager view only) -->
+                            <div class="glass-card" id="manager-requests-box" style="display:none; flex-shrink:0;">
+                                <div class="card-title text-warning">📋 Supervisor Requests Feed</div>
+                                <div id="requests-feed-content" style="display:flex; flex-direction:column; gap:0.5rem; max-height: 180px; overflow-y: auto;">
+                                    <!-- Requests inject dynamically -->
+                                </div>
+                            </div>
+                            
+                            <!-- Leaderboard -->
+                            <div class="glass-card" style="flex-shrink:0;">
+                                <div class="card-title">🏆 Driver Performance Leaderboard</div>
+                                <div id="driver-leaderboard-container">
+                                    <!-- Rendered dynamically -->
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Bottom Analytics row -->
+                    <div class="analytics-grid">
+                        <div class="glass-card">
+                            <div class="card-title">📈 Branch Distribution Trip Volumes</div>
+                            <div id="branch-chart-container" style="height: 200px;"></div>
+                        </div>
+                        <div class="glass-card">
+                            <div class="card-title">⚠️ Transit Incident Delay Reasons</div>
+                            <div id="delay-chart-container" style="height: 200px;"></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 2. OPERATIONS CONSOLE -->
+                <div class="tab-content" id="tab-operations">
+                    <div class="glass-card">
+                        <div class="card-title">
+                            <span>Admin Dispatch & Transit Control Center</span>
+                            <div class="form-group" style="margin-bottom:0; width:220px;">
+                                <select class="form-control" id="console-trip-select">
+                                    <option value="">-- Choose Active Trip --</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div id="console-no-trip" style="padding: 3rem; text-align: center; color: var(--text-secondary);">
+                            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" style="margin-bottom:1rem; opacity:0.5;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+                            <p>No trip selected. Select an active trip from the dropdown above or dispatch a new one.</p>
+                            <button class="btn btn-primary margin-top-1" id="btn-create-trip-from-console">Create & Dispatch New Trip</button>
+                        </div>
+
+                        <div id="console-active-trip" style="display:none;">
+                            <div class="flex justify-between align-center" style="border-bottom:1px solid var(--border-glass); padding-bottom:1rem;">
+                                <div>
+                                    <h3 id="c-trip-id" style="font-family:var(--font-heading); font-size:1.25rem;">TRIP-1002</h3>
+                                    <p id="c-trip-route" style="color:var(--text-secondary); font-size:0.85rem;">Chennai to Madurai</p>
+                                </div>
+                                <div class="text-right">
+                                    <span class="badge badge-transit" id="c-trip-status">In Transit</span>
+                                    <p id="c-dispatch-id" style="color:var(--text-muted); font-size:0.75rem; margin-top:0.25rem;">DISP-2002</p>
+                                </div>
+                            </div>
+
+                            <!-- 12-Step Progress Stepper -->
+                            <div class="timeline-stepper" id="timeline-stepper-console">
+                                <!-- 12 steps inject dynamically -->
+                            </div>
+
+                            <div class="console-split">
+                                <!-- Left side details & history -->
+                                <div>
+                                    <h4 style="font-family:var(--font-heading); margin-bottom:0.75rem; color:var(--color-secondary);">Trip Details</h4>
+                                    <div class="glass-card" style="padding: 1rem; background:rgba(0,0,0,0.2); margin-bottom:1rem;">
+                                        <div class="form-row margin-bottom-1">
+                                            <div>
+                                                <span style="font-size:0.75rem; color:var(--text-muted); display:block;">COMMODITY</span>
+                                                <span id="c-detail-commodity" style="font-weight:700;">Rice (200 Bags)</span>
+                                            </div>
+                                            <div>
+                                                <span style="font-size:0.75rem; color:var(--text-muted); display:block;">VEHICLE</span>
+                                                <span id="c-detail-vehicle" style="font-weight:700;">TN-01-AB-1234 (Lorry)</span>
+                                            </div>
+                                        </div>
+                                        <div class="form-row margin-bottom-1">
+                                            <div>
+                                                <span style="font-size:0.75rem; color:var(--text-muted); display:block;">DRIVER ASSIGNED</span>
+                                                <span id="c-detail-driver" style="font-weight:700;">Selvam R. (+91 98840 12345)</span>
+                                            </div>
+                                            <div>
+                                                <span style="font-size:0.75rem; color:var(--text-muted); display:block;">HELPER ASSIGNED</span>
+                                                <span id="c-detail-helper" style="font-weight:700;">Mani G. (Senior Helper)</span>
+                                            </div>
+                                        </div>
+                                        <div class="form-row">
+                                            <div>
+                                                <span style="font-size:0.75rem; color:var(--text-muted); display:block;">DISPATCH TIME</span>
+                                                <span id="c-detail-dispatch-date" style="font-weight:700;">04 Aug 2026, 09:30 AM</span>
+                                            </div>
+                                            <div>
+                                                <span style="font-size:0.75rem; color:var(--text-muted); display:block;">EXPECTED DELIVERY</span>
+                                                <span id="c-detail-eta" style="font-weight:700;">04 Aug 2026, 05:30 PM</span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <h4 style="font-family:var(--font-heading); margin-bottom:0.75rem;">Recent Logs & Updates</h4>
+                                    <div id="c-transit-logs" style="max-height:160px; overflow-y:auto; display:flex; flex-direction:column; gap:0.5rem; padding-right:0.5rem;">
+                                        <!-- Updates dynamically injected -->
+                                    </div>
+                                </div>
+
+                                <!-- Right side checklist & Call Action interface -->
+                                <div class="console-actions-panel">
+                                    <h4 style="font-family:var(--font-heading); margin-bottom:0.5rem; color:var(--color-primary);">Operator Actions</h4>
+                                    
+                                    <!-- Step-specific layouts render dynamically in app.js -->
+                                    <div id="console-action-area" class="glass-card" style="padding:1.25rem; border-color:var(--color-primary-glow)">
+                                        <!-- Actions HTML injected here -->
+                                    </div>
+
+                                    <!-- Call Helper log quick trigger -->
+                                    <button class="btn btn-secondary w-100" id="btn-manual-call-driver">
+                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+                                        Log Call to Driver / Manager
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 3. TRIPS TRACKER VIEW -->
+                <div class="tab-content" id="tab-trips">
+                    <div class="glass-card">
+                        <div class="flex justify-between align-center margin-bottom-1">
+                            <h3 style="font-family:var(--font-heading);">All Commodity Shipments</h3>
+                            <div class="flex gap-2">
+                                <input type="text" class="form-control" id="trip-search" placeholder="Search Trip / Vehicle / Driver..." style="width:240px;">
+                                <select class="form-control" id="trip-filter-status" style="width:140px;">
+                                    <option value="">All Statuses</option>
+                                    <option value="CREATED">Draft</option>
+                                    <option value="IN_TRANSIT">In Transit</option>
+                                    <option value="DELAYED">Delayed</option>
+                                    <option value="CLOSED">Delivered / Closed</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="table-container">
+                            <table class="lcos-table" id="trips-table">
+                                <thead>
+                                    <tr>
+                                        <th>Trip ID</th>
+                                        <th>Route (Src → Dest)</th>
+                                        <th>Commodity</th>
+                                        <th>Quantity</th>
+                                        <th>Driver / Vehicle</th>
+                                        <th>Status</th>
+                                        <th>Last Update</th>
+                                        <th>Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Injected dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 4. INVENTORY & STOCK VIEW -->
+                <div class="tab-content" id="tab-inventory">
+                    <div class="glass-card">
+                        <div class="flex justify-between align-center margin-bottom-1">
+                            <h3 style="font-family:var(--font-heading);">Branch Stock Distribution</h3>
+                            <div class="flex gap-2 align-center">
+                                <button class="btn btn-primary" id="btn-inventory-action" style="padding: 0.5rem 1rem; font-size: 0.8rem;">Refill Stock</button>
+                                <div class="form-group" style="margin-bottom:0; width:200px;">
+                                    <select class="form-control" id="inventory-commodity-select">
+                                        <!-- Commodities injected -->
+                                    </select>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="table-container">
+                            <table class="lcos-table" id="inventory-table">
+                                <thead>
+                                    <tr>
+                                        <th>Branch Name</th>
+                                        <th>District Code</th>
+                                        <th>Branch Manager</th>
+                                        <th>Available Stock</th>
+                                        <th>In-Transit Stock (Arriving)</th>
+                                        <th>Delivered (Total)</th>
+                                        <th>Pending (Scheduled)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Stock levels inject dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 5. DIRECTORY VIEW -->
+                <div class="tab-content" id="tab-directory">
+                    <div class="directory-tabs">
+                        <button class="dir-tab-btn active" data-dir-sub="drivers">Drivers</button>
+                        <button class="dir-tab-btn" data-dir-sub="vehicles">Vehicles</button>
+                        <button class="dir-tab-btn" data-dir-sub="branches">Branches</button>
+                        <button class="dir-tab-btn" data-dir-sub="helpers">Helpers</button>
+                        <button class="dir-tab-btn" data-dir-sub="commodities">Commodities</button>
+                    </div>
+
+                    <!-- 5a. Drivers Directory Subtab -->
+                    <div class="dir-sub-content active" id="dir-drivers">
+                        <div class="console-split">
+                            <div class="glass-card">
+                                <h4 style="font-family:var(--font-heading); margin-bottom:1rem;">Add Driver</h4>
+                                <form id="form-add-driver">
+                                    <div class="form-group">
+                                        <label class="form-label">Driver Name</label>
+                                        <input type="text" class="form-control" id="drv-name" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">License Number</label>
+                                        <input type="text" class="form-control" id="drv-license" required>
+                                    </div>
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label class="form-label">Phone Number</label>
+                                            <input type="text" class="form-control" id="drv-phone" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="form-label">Experience (Years)</label>
+                                            <input type="number" class="form-control" id="drv-exp" min="1" max="40" required>
+                                        </div>
+                                    </div>
+                                    <button class="btn btn-primary w-100" type="submit">Register Driver</button>
+                                </form>
+                            </div>
+                            
+                            <div class="glass-card" style="overflow-x:auto;">
+                                <h4 style="font-family:var(--font-heading); margin-bottom:1rem;">Drivers List</h4>
+                                <table class="lcos-table" id="table-drivers">
+                                    <thead>
+                                        <tr>
+                                            <th>Name</th>
+                                            <th>License</th>
+                                            <th>Phone</th>
+                                            <th>Experience</th>
+                                            <th>Performance</th>
+                                            <th>Warnings</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <!-- Injected dynamically -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 5b. Vehicles Directory Subtab -->
+                    <div class="dir-sub-content" id="dir-vehicles" style="display:none;">
+                        <div class="console-split">
+                            <div class="glass-card">
+                                <h4 style="font-family:var(--font-heading); margin-bottom:1rem;">Add Vehicle</h4>
+                                <form id="form-add-vehicle">
+                                    <div class="form-group">
+                                        <label class="form-label">Vehicle Registration Number</label>
+                                        <input type="text" class="form-control" id="veh-id" placeholder="TN-XX-XX-XXXX" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Vehicle Type</label>
+                                        <select class="form-control" id="veh-type">
+                                            <option value="Lorry">Lorry</option>
+                                            <option value="Container">Container</option>
+                                            <option value="Mini Truck">Mini Truck</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label class="form-label">Capacity (Metric Tons)</label>
+                                            <input type="number" class="form-control" id="veh-capacity" min="1" max="100" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="form-label">Ownership</label>
+                                            <select class="form-control" id="veh-owner">
+                                                <option value="Self Owned">Self Owned</option>
+                                                <option value="Logistics Partners">Logistics Partners</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <button class="btn btn-primary w-100" type="submit">Register Vehicle</button>
+                                </form>
+                            </div>
+                            
+                            <div class="glass-card" style="overflow-x:auto;">
+                                <h4 style="font-family:var(--font-heading); margin-bottom:1rem;">Vehicles List</h4>
+                                <table class="lcos-table" id="table-vehicles">
+                                    <thead>
+                                        <tr>
+                                            <th>Reg No</th>
+                                            <th>Type</th>
+                                            <th>Capacity</th>
+                                            <th>Ownership</th>
+                                            <th>Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <!-- Injected dynamically -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 5c. Branches Directory Subtab -->
+                    <div class="dir-sub-content" id="dir-branches" style="display:none;">
+                        <div class="console-split">
+                            <div class="glass-card">
+                                <h4 style="font-family:var(--font-heading); margin-bottom:1rem;">Add Branch District</h4>
+                                <form id="form-add-branch">
+                                    <div class="form-group">
+                                        <label class="form-label">District Name</label>
+                                        <input type="text" class="form-control" id="br-name" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Branch Manager</label>
+                                        <input type="text" class="form-control" id="br-manager" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Contact Number</label>
+                                        <input type="text" class="form-control" id="br-phone" required>
+                                    </div>
+                                    <button class="btn btn-primary w-100" type="submit">Create Branch</button>
+                                </form>
+                            </div>
+                            
+                            <div class="glass-card" style="overflow-x:auto;">
+                                <h4 style="font-family:var(--font-heading); margin-bottom:1rem;">Branches List</h4>
+                                <table class="lcos-table" id="table-branches">
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Branch District</th>
+                                            <th>Manager</th>
+                                            <th>Contact Phone</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <!-- Injected dynamically -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 5d. Helpers Directory Subtab -->
+                    <div class="dir-sub-content" id="dir-helpers" style="display:none;">
+                        <div class="glass-card">
+                            <h4 style="font-family:var(--font-heading); margin-bottom:1rem;">Helpers Directory</h4>
+                            <table class="lcos-table" id="table-helpers">
+                                <thead>
+                                    <tr>
+                                        <th>Helper Name</th>
+                                        <th>Contact Number</th>
+                                        <th>Role Type</th>
+                                        <th>Availability</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Injected dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+
+                    <!-- 5e. Commodities Directory Subtab -->
+                    <div class="dir-sub-content" id="dir-commodities" style="display:none;">
+                        <div class="console-split">
+                            <div class="glass-card">
+                                <h4 style="font-family:var(--font-heading); margin-bottom:1rem;">Add Commodity</h4>
+                                <form id="form-add-commodity">
+                                    <div class="form-group">
+                                        <label class="form-label">Commodity Name</label>
+                                        <input type="text" class="form-control" id="com-name" required>
+                                    </div>
+                                    <div class="form-group">
+                                        <label class="form-label">Measurement Unit</label>
+                                        <input type="text" class="form-control" id="com-unit" placeholder="e.g. Bags, Tons, Boxes" required>
+                                    </div>
+                                    <div class="form-row">
+                                        <div class="form-group">
+                                            <label class="form-label">Unit Weight (kg)</label>
+                                            <input type="number" class="form-control" id="com-weight" required>
+                                        </div>
+                                        <div class="form-group">
+                                            <label class="form-label">Estimated Value (₹ / unit)</label>
+                                            <input type="number" class="form-control" id="com-value" required>
+                                        </div>
+                                    </div>
+                                    <button class="btn btn-primary w-100" type="submit">Create Commodity</button>
+                                </form>
+                            </div>
+                            <div class="glass-card">
+                                <h4 style="font-family:var(--font-heading); margin-bottom:1rem;">Commodity Directory</h4>
+                                <table class="lcos-table" id="table-commodities">
+                                    <thead>
+                                        <tr>
+                                            <th>ID</th>
+                                            <th>Commodity</th>
+                                            <th>Unit</th>
+                                            <th>Weight</th>
+                                            <th>Value</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        <!-- Injected dynamically -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 6. CALL LOGS VIEW -->
+                <div class="tab-content" id="tab-calllogs">
+                    <div class="glass-card">
+                        <div class="flex justify-between align-center margin-bottom-1">
+                            <h3 style="font-family:var(--font-heading);">LCOS Operator Call Records</h3>
+                            <div class="flex gap-2">
+                                <input type="text" class="form-control" id="call-search" placeholder="Search Calls (Trip, Notes)..." style="width:240px;">
+                                <select class="form-control" id="call-filter-type" style="width:180px;">
+                                    <option value="">All Call Types</option>
+                                    <option value="Dispatch Confirmation">Dispatch Confirmation</option>
+                                    <option value="Transit Update">Transit Update</option>
+                                    <option value="Delay Check">Delay Check</option>
+                                    <option value="Escalation Call">Escalation Call</option>
+                                    <option value="Arrival Update">Arrival Update</option>
+                                    <option value="Delivery Confirmation">Delivery Confirmation</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="table-container">
+                            <table class="lcos-table" id="calllogs-table">
+                                <thead>
+                                    <tr>
+                                        <th>Log ID</th>
+                                        <th>Timestamp (Sim)</th>
+                                        <th>Trip ID</th>
+                                        <th>Call Category</th>
+                                        <th>Caller</th>
+                                        <th>Recipient</th>
+                                        <th>Conversation Notes</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <!-- Injected dynamically -->
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- Right Side Panel: Simulator & Heartbeat Simulation Control -->
+        <aside class="sim-panel" id="simulator-panel">
+            <div class="sim-header">
+                <h3>🛠️ LCOS Simulator Panel</h3>
+                <button class="modal-close" id="btn-close-sim" style="font-size: 1.25rem;">×</button>
+            </div>
+            
+            <div class="sim-body">
+                <!-- 1. Simulator Status -->
+                <div class="sim-card">
+                    <div class="sim-title">
+                        <span>Heartbeat Simulator</span>
+                        <span id="sim-status-label" class="text-success" style="font-size:0.75rem;">RUNNING</span>
+                    </div>
+                    <button class="btn btn-secondary w-100" id="btn-toggle-sim-run">Pause Simulator Time</button>
+                </div>
+                
+                <!-- 2. Simulation Speed -->
+                <div class="sim-card">
+                    <div class="sim-title">
+                        <span>Simulation Speed</span>
+                        <span id="sim-speed-label">60x (1s = 1min)</span>
+                    </div>
+                    <input type="range" class="form-control" id="sim-speed-slider" min="1" max="300" value="60" style="margin-bottom:0.5rem; accent-color:var(--color-warning);">
+                    <p style="font-size:0.7rem; color:var(--text-muted);">Increase speed to quickly trigger missing update alerts and delay events.</p>
+                </div>
+                
+                <!-- 3. Immediate Event Injectors -->
+                <div class="sim-card">
+                    <div class="sim-title">Inject Event</div>
+                    <div style="display:flex; flex-direction:column; gap:0.5rem;">
+                        <button class="btn btn-secondary w-100" id="btn-sim-trigger-call" style="font-size:0.8rem; text-align:left;">
+                            📞 Force Driver Check-in Call
+                        </button>
+                        <button class="btn btn-secondary w-100" id="btn-sim-trigger-breakdown" style="font-size:0.8rem; text-align:left;">
+                            ⚠️ Force Vehicle Breakdown
+                        </button>
+                        <button class="btn btn-secondary w-100" id="btn-sim-trigger-escalation" style="font-size:0.8rem; text-align:left;">
+                            🚨 Force Missed Update (Unreachable)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 4. Reset Button -->
+                <div class="sim-card" style="border-color: rgba(239, 68, 68, 0.2); margin-top: auto;">
+                    <div class="sim-title text-danger">Danger Zone</div>
+                    <button class="btn btn-danger w-100" id="btn-reset-db" style="font-size:0.8rem;">
+                        ⚠️ Reset Simulation Data
+                    </button>
+                </div>
+            </div>
+        </aside>
+    </div>
+
+    <!-- TOASTS CONTAINER -->
+    <div class="toast-container" id="toasts-wrapper"></div>
+
+    <!-- MODAL OVERLAY: CREATE TRIP -->
+    <div class="modal-overlay" id="modal-create-trip">
+        <div class="glass-card modal-container" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3 style="font-family:var(--font-heading);">Schedule & Dispatch New Trip</h3>
+                <button class="modal-close" onclick="app.closeModal('modal-create-trip')">×</button>
+            </div>
+            <form id="form-create-trip">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Source Branch</label>
+                        <select class="form-control" id="t-source" required>
+                            <!-- Branches inject -->
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Destination Branch</label>
+                        <select class="form-control" id="t-dest" required>
+                            <!-- Branches inject -->
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Commodity Details</label>
+                        <select class="form-control" id="t-commodity" required>
+                            <!-- Commodities inject -->
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Quantity</label>
+                        <input type="number" class="form-control" id="t-qty" min="1" required>
+                        <span id="t-qty-label" style="font-size: 0.75rem; color:var(--text-muted);">Available weight: --</span>
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Vehicle Assigned</label>
+                        <select class="form-control" id="t-vehicle" required>
+                            <!-- Vehicles inject -->
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Driver Assigned</label>
+                        <select class="form-control" id="t-driver" required>
+                            <!-- Drivers inject -->
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Helper Assigned (Optional)</label>
+                    <select class="form-control" id="t-helper">
+                        <option value="">No Helper assigned</option>
+                        <!-- Helpers inject -->
+                    </select>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Expected Hours in Transit</label>
+                        <input type="number" class="form-control" id="t-hours" min="1" max="72" value="8" required>
+                    </div>
+                    <div class="form-group" style="display:flex; align-items:flex-end;">
+                        <button class="btn btn-primary w-100" type="submit">Schedule Dispatch</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL OVERLAY: LOG MANUAL CALL -->
+    <div class="modal-overlay" id="modal-log-call">
+        <div class="glass-card modal-container" style="max-width: 480px;">
+            <div class="modal-header">
+                <h3 style="font-family:var(--font-heading);">Log Phone Call Conversation</h3>
+                <button class="modal-close" onclick="app.closeModal('modal-log-call')">×</button>
+            </div>
+            <form id="form-log-call">
+                <input type="hidden" id="call-trip-id">
+                <div class="form-group">
+                    <label class="form-label">Trip Reference ID</label>
+                    <input type="text" class="form-control" id="call-trip-ref" readonly>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="form-label">Call Category</label>
+                        <select class="form-control" id="call-category" required>
+                            <option value="Transit Update">Transit Update</option>
+                            <option value="Delay Check">Delay Check</option>
+                            <option value="Arrival Update">Arrival Update</option>
+                            <option value="Dispatch Confirmation">Dispatch Confirmation</option>
+                            <option value="Delivery Confirmation">Delivery Confirmation</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Caller Party</label>
+                        <select class="form-control" id="call-caller" required>
+                            <option value="Driver">Driver (Incoming Call)</option>
+                            <option value="Admin Office">Admin Office (Outgoing Call)</option>
+                            <option value="Branch Manager">Branch Manager</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Transit Location Check-in</label>
+                    <input type="text" class="form-control" id="call-location" placeholder="e.g. bypass road, toll booth">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Conversation / Verification Notes</label>
+                    <textarea class="form-control" id="call-notes" rows="3" placeholder="Enter what the driver/manager confirmed..." required></textarea>
+                </div>
+                <button class="btn btn-primary w-100" type="submit">Record Call Log</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL OVERLAY: DIGITAL RECEIPT -->
+    <div class="modal-overlay" id="modal-receipt">
+        <div class="modal-container" style="max-width: 500px;">
+            <div style="background:var(--bg-glass); border-radius:16px; padding:1.5rem; margin-bottom:1rem; border: 1px solid var(--border-glass);" class="flex justify-between align-center">
+                <h3 style="font-family:var(--font-heading); font-size:1.1rem;">Digital Receipt Viewer</h3>
+                <div class="flex gap-2">
+                    <button class="btn btn-secondary" onclick="window.print()">Print/Download</button>
+                    <button class="btn btn-primary" onclick="app.closeModal('modal-receipt')">Close</button>
+                </div>
+            </div>
+            
+            <div id="receipt-modal-content">
+                <!-- Receipt Paper template injects here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL OVERLAY: SUBMIT SUPERVISOR REQUEST -->
+    <div class="modal-overlay" id="modal-request-resource">
+        <div class="glass-card modal-container" style="max-width: 500px;">
+            <div class="modal-header">
+                <h3 style="font-family:var(--font-heading);">Submit Operations Request to Supervisor</h3>
+                <button class="modal-close" onclick="app.closeModal('modal-request-resource')">×</button>
+            </div>
+            <form id="form-submit-request">
+                <div class="form-group">
+                    <label class="form-label">Request Category</label>
+                    <select class="form-control" id="req-resource-type" required>
+                        <option value="Add Driver">Request New Driver Registration</option>
+                        <option value="Add Vehicle">Request New Vehicle Registration</option>
+                        <option value="Add Stock">Request Warehouse Stock Refill</option>
+                    </select>
+                </div>
+                
+                <div id="req-fields-container">
+                    <!-- Loaded dynamically in app.js -->
+                </div>
+                
+                <button class="btn btn-primary w-100 margin-top-1" type="submit">Submit Request</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL OVERLAY: MANAGER MANUALLY ADD STOCK -->
+    <div class="modal-overlay" id="modal-manager-add-stock">
+        <div class="glass-card modal-container" style="max-width: 400px;">
+            <div class="modal-header">
+                <h3 style="font-family:var(--font-heading);">Supervisor Stock Replenishment</h3>
+                <button class="modal-close" onclick="app.closeModal('modal-manager-add-stock')">×</button>
+            </div>
+            <form id="form-manager-add-stock">
+                <div class="form-group">
+                    <label class="form-label">Target Branch</label>
+                    <select class="form-control" id="mas-branch" required></select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Commodity</label>
+                    <select class="form-control" id="mas-commodity" required></select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Quantity to Add</label>
+                    <input type="number" class="form-control" id="mas-quantity" min="1" required>
+                </div>
+                <button class="btn btn-success w-100 margin-top-1" type="submit">Replenish Stock Directly</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- 3D Animated Login Screen Overlay -->
+    <div id="login-page">
+        <!-- Animated 3D background shapes -->
+        <div class="login-bg"></div>
+        <div class="login-shapes">
+            <div class="floating-shape shape-1"></div>
+            <div class="floating-shape shape-2"></div>
+            <div class="floating-shape shape-3"></div>
+        </div>
+
+        <div class="login-box">
+            <div class="login-title-container">
+                <div class="login-logo">
+                    <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round">
+                        <rect x="2" y="3" width="20" height="14" rx="2" ry="2"></rect>
+                        <line x1="8" y1="21" x2="16" y2="21"></line>
+                        <line x1="12" y1="17" x2="12" y2="21"></line>
+                    </svg>
+                </div>
+                <h1>LCOS PORTAL</h1>
+                <p>Logistics Operations Control System</p>
+            </div>
+
+            <div class="login-card-container">
+                <!-- Role Card 1: Tracking Team -->
+                <div class="login-card" id="card-login-tracking">
+                    <div class="login-card-icon">📞</div>
+                    <h3>Tracking Team</h3>
+                    <p>Operator View. Create shipments, log check-in calls, verify unloading, and track return trips.</p>
+                </div>
+
+                <!-- Role Card 2: Branch Manager -->
+                <div class="login-card" id="card-login-manager">
+                    <div class="login-card-icon">💼</div>
+                    <h3>Branch Manager</h3>
+                    <p>Supervisor View. Manage directories, add base stocks directly, and approve operator requests.</p>
+                </div>
+
+                <!-- Role Card 3: 2 Owners -->
+                <div class="login-card owner-card" id="card-login-owner">
+                    <div class="login-card-icon">👑</div>
+                    <h3>2 Owners Login</h3>
+                    <p>Executive Monitoring Mode. Global read-only reports, audit call history, and oversee operations.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPTS -->
+    <script src="js/state.js"></script>
+    <script src="js/simulation.js"></script>
+    <script src="js/charts.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
