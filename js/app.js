@@ -698,6 +698,10 @@ const app = {
         const hlpObj = LCOS_State.getHelpers().find(h => h.id === trip.helperId);
         document.getElementById('c-detail-helper').textContent = hlpObj ? `${hlpObj.name} (${hlpObj.role})` : 'No Helper Assigned';
 
+        // Add creator ID
+        const creatorEl = document.getElementById('c-detail-creator');
+        if (creatorEl) creatorEl.textContent = trip.createdBy || 'Pre-seeded Default';
+
         // Set Timings
         const formatDate = (isoStr) => {
             const date = new Date(isoStr);
@@ -721,6 +725,7 @@ const app = {
                         <span style="color:var(--text-muted); font-size:0.7rem; font-family:monospace;">[${formatDate(u.timestamp)}]</span>
                         <strong style="color:${isD ? 'var(--color-warning)' : 'var(--color-transit)'};">${u.location}</strong>: 
                         <span>${u.remarks}</span>
+                        ${u.operatorId ? `<span class="badge badge-draft" style="font-size:0.65rem; padding:0.05rem 0.25rem; margin-left:0.25rem; background:rgba(99,102,241,0.15); border:1px solid rgba(99,102,241,0.25);">${u.operatorId}</span>` : ''}
                         ${u.delayReason ? `<span class="badge badge-delayed" style="font-size:0.6rem; padding:0 0.25rem; margin-left:0.25rem;">${u.delayReason}</span>` : ''}
                     </div>
                 `;
@@ -807,6 +812,18 @@ const app = {
         const container = document.getElementById('console-action-area');
         container.innerHTML = '';
 
+        const role = LCOS_State.getCurrentRole();
+        
+        let empIdHTML = '';
+        if (role === 'tracking_team') {
+            empIdHTML = `
+                <div class="form-group margin-bottom-1" style="border-bottom:1px dashed var(--border-glass); padding-bottom:0.75rem; margin-bottom: 0.75rem;">
+                    <label class="form-label" style="font-weight:600; color:var(--color-primary); font-size:0.75rem; margin-bottom:0.25rem;">Operator Employee ID (Emp ID) <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="op-emp-id" placeholder="e.g. EMP-101" required value="${this.operatorEmpId || ''}" oninput="app.operatorEmpId = this.value" style="background:rgba(0,0,0,0.35); font-size:0.75rem; padding:0.25rem 0.5rem; height:auto;">
+                </div>
+            `;
+        }
+
         if (trip.status === 'CREATED') {
             // Stage 1: Created (Needs Dispatch checklist approval)
             const role = LCOS_State.getCurrentRole();
@@ -824,7 +841,8 @@ const app = {
 
             const simTime = new Date(LCOS_State.getSystemSettings().simulationTime);
             const schedTime = new Date(trip.dispatchDate);
-            const isLate = simTime > schedTime;
+            // Require a late dispatch reason only if the delay is more than 15 minutes (grace period)
+            const isLate = (simTime.getTime() - schedTime.getTime()) > (15 * 60 * 1000);
             
             let lateRow = '';
             if (isLate && role === 'tracking_team') {
@@ -843,7 +861,7 @@ const app = {
                 `;
             }
 
-            container.innerHTML = `
+            container.innerHTML = empIdHTML + `
                 <h5 style="margin-bottom:0.75rem; font-size:0.95rem;">Phase 2: Dispatch Approval Checklist</h5>
                 <p style="font-size:0.75rem; color:var(--text-secondary); margin-bottom:0.75rem;">
                     Call Origin Branch Manager <strong>(${LCOS_State.getBranches().find(b => b.id === trip.sourceBranchId).manager})</strong> to verify the cargo loading:
@@ -874,6 +892,9 @@ const app = {
             `;
 
             document.getElementById('btn-submit-dispatch')?.addEventListener('click', () => {
+                const empId = this.getConsoleEmpId();
+                if (!empId) return;
+
                 if (isLate) {
                     const reason = document.getElementById('op-late-reason').value;
                     if (!reason) {
@@ -883,6 +904,18 @@ const app = {
                     trip.lateDispatchReason = reason;
                 }
 
+                const simTime = LCOS_State.getSystemSettings().simulationTime;
+                trip.transitUpdates.push({
+                    timestamp: simTime,
+                    location: 'Origin Branch',
+                    condition: 'Good',
+                    status: 'DISPATCH_APPROVED',
+                    delayReason: '',
+                    remarks: `Dispatch checklist approved. ${isLate ? 'DELAYED DISPATCH REASON: ' + trip.lateDispatchReason : ''}`,
+                    operatorId: empId
+                });
+                trip.lastUpdateTimestamp = simTime;
+
                 LCOS_State.updateTripStatus(trip.id, 'DISPATCH_APPROVED');
                 
                 // Add Call Log
@@ -891,7 +924,7 @@ const app = {
                     type: 'Dispatch Confirmation',
                     caller: 'Admin Office',
                     recipient: `${LCOS_State.getBranches().find(b => b.id === trip.sourceBranchId).name} Manager`,
-                    notes: `Verified checklists. Dispatch approved. ${isLate ? 'DELAYED DISPATCH REASON: ' + trip.lateDispatchReason : ''}`
+                    notes: `Verified checklists. Dispatch approved. Operator: ${empId}. ${isLate ? 'DELAYED DISPATCH REASON: ' + trip.lateDispatchReason : ''}`
                 });
 
                 this.showToast('Trip Dispatch Approved. Status updated.', 'success');
@@ -905,7 +938,7 @@ const app = {
             const btnDisabled = role === 'branch_manager';
             const helpText = btnDisabled ? `<p style="font-size:0.75rem; color:var(--color-warning); font-weight:600; margin-top:0.5rem; text-align:center;">⚠️ View Only: Driver briefings are logged by the Tracking Team.</p>` : '';
 
-            container.innerHTML = `
+            container.innerHTML = empIdHTML + `
                 <h5 style="margin-bottom:0.75rem; font-size:0.95rem;">Phase 3: Call Assigned Driver</h5>
                 <p style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:1rem;">
                     Call the driver <strong>${drv ? drv.name : 'Unknown'}</strong> at <strong>${drv ? drv.phone : '--'}</strong> to inform them of trip schedule, routes, and expected checkpoints.
@@ -918,13 +951,28 @@ const app = {
 
             if (!btnDisabled) {
                 document.getElementById('btn-call-driver-brief').addEventListener('click', () => {
+                    const empId = this.getConsoleEmpId();
+                    if (!empId) return;
+
+                    const simTime = LCOS_State.getSystemSettings().simulationTime;
+                    trip.transitUpdates.push({
+                        timestamp: simTime,
+                        location: 'Origin Branch',
+                        condition: 'Good',
+                        status: 'DRIVER_CALLED',
+                        delayReason: '',
+                        remarks: `Briefed driver on route parameters.`,
+                        operatorId: empId
+                    });
+                    trip.lastUpdateTimestamp = simTime;
+
                     LCOS_State.updateTripStatus(trip.id, 'DRIVER_CALLED');
                     LCOS_State.addCallLog({
                         tripId: trip.id,
                         type: 'Transit Update',
                         caller: 'Admin Office',
                         recipient: `Driver (${drv ? drv.name : ''})`,
-                        notes: 'Briefed driver on route parameters. Informed reporting frequency (every 2-4 hours).'
+                        notes: `Briefed driver on route parameters. Operator: ${empId}.`
                     });
                     this.showToast('Driver briefed. Status: DRIVER CALLED.', 'info');
                     this.renderAll();
@@ -938,7 +986,7 @@ const app = {
             const btnDisabled = role === 'branch_manager';
             const helpText = btnDisabled ? `<p style="font-size:0.75rem; color:var(--color-warning); font-weight:600; margin-top:0.5rem; text-align:center;">⚠️ View Only: Driver confirmations are logged by the Tracking Team.</p>` : '';
 
-            container.innerHTML = `
+            container.innerHTML = empIdHTML + `
                 <h5 style="margin-bottom:0.75rem; font-size:0.95rem;">Phase 4: Confirm Driver Readiness</h5>
                 <p style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:1rem;">
                     Driver must call back once they inspect the loaded vehicle and verify everything is secure.
@@ -951,13 +999,28 @@ const app = {
 
             if (!btnDisabled) {
                 document.getElementById('btn-confirm-readiness').addEventListener('click', () => {
+                    const empId = this.getConsoleEmpId();
+                    if (!empId) return;
+
+                    const simTime = LCOS_State.getSystemSettings().simulationTime;
+                    trip.transitUpdates.push({
+                        timestamp: simTime,
+                        location: 'Origin Branch',
+                        condition: 'Good',
+                        status: 'DRIVER_CONFIRMED',
+                        delayReason: '',
+                        remarks: `Driver confirmed vehicle inspection completed. Ready to start.`,
+                        operatorId: empId
+                    });
+                    trip.lastUpdateTimestamp = simTime;
+
                     LCOS_State.updateTripStatus(trip.id, 'DRIVER_CONFIRMED');
                     LCOS_State.addCallLog({
                         tripId: trip.id,
                         type: 'Transit Update',
                         caller: `Driver (${drv ? drv.name : ''})`,
                         recipient: 'Admin Office',
-                        notes: 'Driver confirmed vehicle inspect completed. Ready to start journey.'
+                        notes: `Driver confirmed vehicle inspection completed. Operator: ${empId}.`
                     });
                     this.showToast('Driver ready confirmed. Status: DRIVER CONFIRMED.', 'success');
                     this.renderAll();
@@ -970,7 +1033,7 @@ const app = {
             const btnDisabled = role === 'branch_manager';
             const helpText = btnDisabled ? `<p style="font-size:0.75rem; color:var(--color-warning); font-weight:600; margin-top:0.5rem; text-align:center;">⚠️ View Only: Departures are logged by the Tracking Team.</p>` : '';
 
-            container.innerHTML = `
+            container.innerHTML = empIdHTML + `
                 <h5 style="margin-bottom:0.75rem; font-size:0.95rem;">Phase 5: Record Vehicle Start</h5>
                 <p style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:1rem;">
                     Driver calls as the wheels spin and they leave the origin warehouse gates.
@@ -983,6 +1046,9 @@ const app = {
 
             if (!btnDisabled) {
                 document.getElementById('btn-start-journey').addEventListener('click', () => {
+                    const empId = this.getConsoleEmpId();
+                    if (!empId) return;
+
                     const simTime = LCOS_State.getSystemSettings().simulationTime;
                     LCOS_State.updateTripStatus(trip.id, 'IN_TRANSIT');
                     trip.transitUpdates.push({
@@ -991,7 +1057,8 @@ const app = {
                         condition: 'Good',
                         status: 'IN_TRANSIT',
                         delayReason: '',
-                        remarks: 'Journey commenced. Vehicle loaded and moving.'
+                        remarks: 'Journey commenced. Vehicle loaded and moving.',
+                        operatorId: empId
                     });
                     trip.lastUpdateTimestamp = simTime;
                     LCOS_State.save();
@@ -1001,7 +1068,7 @@ const app = {
                         type: 'Transit Update',
                         caller: 'Driver',
                         recipient: 'Admin Office',
-                        notes: 'Driver called. Confirmed departure from origin.'
+                        notes: `Driver called. Confirmed departure from origin. Operator: ${empId}.`
                     });
 
                     this.showToast('Journey started. Status changed to IN TRANSIT.', 'success');
@@ -1040,7 +1107,7 @@ const app = {
                         </button>`;
                     }
 
-                    container.innerHTML = `
+                    container.innerHTML = empIdHTML + `
                         <h5 style="margin-bottom:0.5rem; font-size:0.95rem;" class="text-danger">⚠️ Call Escalation Wizard ${alert.escalated ? '(Escalated)' : ''}</h5>
                         <div style="font-size:0.75rem; background:rgba(239,68,68,0.06); padding:0.5rem; border-radius:6px; border:1px solid rgba(239,68,68,0.2); margin-bottom:0.75rem;">
                             <strong>ALERT:</strong> Unresponsive driver. Strike ${esc.attempts}/3.
@@ -1058,7 +1125,17 @@ const app = {
                     `;
 
                     document.getElementById('btn-escalate-call').addEventListener('click', () => {
+                        const empId = this.getConsoleEmpId();
+                        if (!empId) return;
+
                         const result = LCOS_Sim.attemptEscalationCall(alert.id);
+                        if (result.answered) {
+                            // If they answered, register operator ID in logs
+                            const lastLog = LCOS_State.getCallLogs().filter(c => c.tripId === trip.id).pop();
+                            if (lastLog) {
+                                lastLog.notes += ` Operator: ${empId}.`;
+                            }
+                        }
                         this.showToast(result.message, result.answered ? 'success' : 'danger');
                         this.renderAll();
                     });
@@ -1115,7 +1192,7 @@ const app = {
                 } else {
                     // Normal In Transit logging form
                     const drv = LCOS_State.getDrivers().find(d => d.id === trip.driverId);
-                    container.innerHTML = `
+                    container.innerHTML = empIdHTML + `
                         <h5 style="margin-bottom:0.75rem; font-size:0.95rem;">Log Regular Transit Check-in</h5>
                         <div class="form-group">
                             <label class="form-label">Current Highway Location</label>
@@ -1172,6 +1249,9 @@ const app = {
                     });
 
                     document.getElementById('btn-save-transit-call').addEventListener('click', () => {
+                        const empId = this.getConsoleEmpId();
+                        if (!empId) return;
+
                         const loc = document.getElementById('op-log-loc').value;
                         const cond = document.getElementById('op-log-cond').value;
                         const status = document.getElementById('op-log-status').value;
@@ -1193,7 +1273,8 @@ const app = {
                             condition: cond,
                             status: status,
                             delayReason: status === 'DELAYED' ? delayReason : '',
-                            remarks: notes
+                            remarks: notes,
+                            operatorId: empId
                         });
                         trip.lastUpdateTimestamp = simTime;
 
@@ -1203,7 +1284,7 @@ const app = {
                             type: status === 'ARRIVED' ? 'Arrival Update' : status === 'DELAYED' ? 'Delay Check' : 'Transit Update',
                             caller: `Driver (${drv ? drv.name : ''})`,
                             recipient: 'Admin Office',
-                            notes: `Location: ${loc}. Status: ${status}. Condition: ${cond}. notes: ${notes}`
+                            notes: `Location: ${loc}. Status: ${status}. Condition: ${cond}. Operator: ${empId}. Notes: ${notes}`
                         });
 
                         // Resolve "No Update" alerts if any
@@ -1232,7 +1313,7 @@ const app = {
                 helpText = `<p style="font-size:0.75rem; color:var(--color-warning); font-weight:600; margin-top:0.5rem; text-align:center;">⚠️ View Only: Day-to-day unloading confirmations are completed by the Tracking Team.</p>`;
             }
 
-            container.innerHTML = `
+            container.innerHTML = empIdHTML + `
                 <h5 style="margin-bottom:0.75rem; font-size:0.95rem;">Phase 6: Delivery Confirmation</h5>
                 <p style="font-size:0.75rem; color:var(--text-secondary); margin-bottom:0.75rem;">
                     Call Destination Branch Manager <strong>(${manager})</strong> to confirm unloading statistics:
@@ -1288,6 +1369,9 @@ const app = {
             `;
 
             document.getElementById('btn-save-delivery')?.addEventListener('click', () => {
+                const empId = this.getConsoleEmpId();
+                if (!empId) return;
+
                 const receivedVal = Number(document.getElementById('dl-qty').value);
                 const damagesVal = Number(document.getElementById('dl-damages').value);
                 const missingVal = Number(document.getElementById('dl-missing').value);
@@ -1300,6 +1384,16 @@ const app = {
 
                 const simTime = LCOS_State.getSystemSettings().simulationTime;
                 const recNum = 'RCPT-' + Math.floor(Math.random() * 9000 + 1000);
+
+                trip.transitUpdates.push({
+                    timestamp: simTime,
+                    location: 'Destination Branch Gates',
+                    condition: ratingVal,
+                    status: 'CLOSED',
+                    delayReason: '',
+                    remarks: `Shipment delivered. Receipt generated: ${recNum}. Total received: ${receivedVal}. Damages: ${damagesVal}.`,
+                    operatorId: empId
+                });
 
                 LCOS_State.closeTripDelivery(trip.id, {
                     receivedQuantity: receivedVal,
@@ -1317,7 +1411,7 @@ const app = {
                     type: 'Delivery Confirmation',
                     caller: 'Admin Office',
                     recipient: `${LCOS_State.getBranches().find(b => b.id === trip.destinationBranchId).name} Manager`,
-                    notes: `Trip closed. Digital receipt generated: ${recNum}. Total received: ${receivedVal}. Damages: ${damagesVal}.`
+                    notes: `Trip closed. Digital receipt generated: ${recNum}. Total received: ${receivedVal}. Damages: ${damagesVal}. Operator: ${empId}.`
                 });
 
                 this.showToast(`Trip ${trip.id} delivered and stock updated! Receipt generated.`, 'success');
@@ -1328,7 +1422,7 @@ const app = {
         else if (trip.status === 'CLOSED') {
             const role = LCOS_State.getCurrentRole();
             if (role === 'tracking_team') {
-                container.innerHTML = `
+                container.innerHTML = empIdHTML + `
                     <h5 style="margin-bottom:0.75rem; font-size:0.95rem;" class="text-success">✅ Trip Leg Completed</h5>
                     <p style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:0.75rem;">
                         Delivery completed. Receipt <strong>${trip.deliveryInfo.receiptNumber}</strong> generated and archived in LCOS logs.
@@ -1344,6 +1438,21 @@ const app = {
                     </button>
                 `;
                 document.getElementById('btn-initiate-return').addEventListener('click', () => {
+                    const empId = this.getConsoleEmpId();
+                    if (!empId) return;
+
+                    const simTime = LCOS_State.getSystemSettings().simulationTime;
+                    trip.transitUpdates.push({
+                        timestamp: simTime,
+                        location: 'Destination Branch',
+                        condition: 'Good',
+                        status: 'RETURNING',
+                        delayReason: '',
+                        remarks: `Initiated empty lorry return leg back to home base.`,
+                        operatorId: empId
+                    });
+                    trip.lastUpdateTimestamp = simTime;
+
                     LCOS_State.updateTripStatus(trip.id, 'RETURNING');
                     this.showToast('Return leg initiated. Lorry en route to home base.', 'success');
                     this.renderAll();
@@ -1365,7 +1474,7 @@ const app = {
             const sourceBr = LCOS_State.getBranches().find(b => b.id === trip.sourceBranchId);
             
             if (role === 'tracking_team') {
-                container.innerHTML = `
+                container.innerHTML = empIdHTML + `
                     <h5 style="margin-bottom:0.75rem; font-size:0.95rem;" class="text-transit">🚚 Return Leg Progress</h5>
                     <p style="font-size:0.75rem; color:var(--text-secondary); margin-bottom:0.75rem;">
                         Track empty vehicle return to home base <strong>(${sourceBr ? sourceBr.name : 'Origin'})</strong>:
@@ -1388,6 +1497,9 @@ const app = {
                     </div>
                 `;
                 document.getElementById('btn-save-return-log').addEventListener('click', () => {
+                    const empId = this.getConsoleEmpId();
+                    if (!empId) return;
+
                     const loc = document.getElementById('ret-log-loc').value;
                     const notes = document.getElementById('ret-log-notes').value;
                     if (!loc || !notes) {
@@ -1401,7 +1513,8 @@ const app = {
                         condition: 'Good',
                         status: 'RETURNING',
                         delayReason: '',
-                        remarks: notes
+                        remarks: notes,
+                        operatorId: empId
                     });
                     trip.lastUpdateTimestamp = simTime;
                     LCOS_State.addCallLog({
@@ -1409,7 +1522,7 @@ const app = {
                         type: 'Transit Update',
                         caller: 'Driver',
                         recipient: 'Admin Office',
-                        notes: `Return leg checkpoint: ${loc}. Remarks: ${notes}`
+                        notes: `Return leg checkpoint: ${loc}. Remarks: ${notes}. Operator: ${empId}.`
                     });
                     LCOS_State.save();
                     this.showToast('Return checkpoint logged.', 'success');
@@ -1417,6 +1530,20 @@ const app = {
                 });
 
                 document.getElementById('btn-confirm-return-arrival').addEventListener('click', () => {
+                    const empId = this.getConsoleEmpId();
+                    if (!empId) return;
+
+                    const simTime = LCOS_State.getSystemSettings().simulationTime;
+                    trip.transitUpdates.push({
+                        timestamp: simTime,
+                        location: sourceBr ? sourceBr.name : 'Origin Home Base',
+                        condition: 'Good',
+                        status: 'COMPLETED_RETURN',
+                        delayReason: '',
+                        remarks: 'Lorry returned empty to home base. Driver and vehicle released.',
+                        operatorId: empId
+                    });
+
                     LCOS_State.recordReturnArrival(trip.id);
                     this.showToast('Return leg completed. Lorry and driver are now available.', 'success');
                     this.renderAll();
@@ -1859,6 +1986,9 @@ const app = {
         }
         
         return trips.filter(t => {
+            const isCurrentlyRunning = t.status !== 'CLOSED' && t.status !== 'COMPLETED_RETURN';
+            if (isCurrentlyRunning) return true;
+            
             const tripDate = new Date(t.lastUpdateTimestamp);
             return tripDate >= startBound && tripDate <= endBound;
         });
@@ -1872,8 +2002,22 @@ const app = {
         const prevSelected = vehSelect.value;
         vehSelect.innerHTML = '<option value="">-- All Running Trucks --</option>';
         
+        const statusMap = {
+            CREATED: 'Draft',
+            DISPATCH_APPROVED: 'Approved',
+            DRIVER_CALLED: 'Driver Called',
+            DRIVER_CONFIRMED: 'Driver Ready',
+            IN_TRANSIT: 'In Transit',
+            DELAYED: 'Delayed',
+            ARRIVED: 'Arrived',
+            DELIVERY_CONFIRMED: 'Delivering',
+            CLOSED: 'Delivered',
+            RETURNING: 'Returning',
+            COMPLETED_RETURN: 'Returned'
+        };
+
         filteredTrips.forEach(t => {
-            const statusLabel = t.status === 'CLOSED' ? 'Delivered' : t.status === 'RETURNING' ? 'Returning' : 'In Transit';
+            const statusLabel = statusMap[t.status] || t.status;
             vehSelect.innerHTML += `<option value="${t.id}">${t.vehicleId} (${statusLabel})</option>`;
         });
         
@@ -2013,6 +2157,21 @@ const app = {
         // District clicks are disabled for routes only map view
     },
 
+    getConsoleEmpId() {
+        const role = LCOS_State.getCurrentRole();
+        if (role !== 'tracking_team') return 'Manager/Viewer';
+        
+        const empInput = document.getElementById('op-emp-id');
+        const empId = empInput ? empInput.value.trim() : '';
+        if (!empId) {
+            this.showToast('Please enter your Employee ID (Emp ID) first!', 'warning');
+            if (empInput) empInput.focus();
+            return null;
+        }
+        this.operatorEmpId = empId;
+        return empId;
+    },
+
     // --- Modal Handling ---
 
     openModal(modalId) {
@@ -2085,6 +2244,13 @@ const app = {
         const hlpId = document.getElementById('t-helper').value || null;
         const durationHours = Number(document.getElementById('t-hours').value);
 
+        const empId = document.getElementById('t-emp-id').value.trim();
+        if (!empId) {
+            this.showToast('Operator Employee ID is required to schedule dispatch.', 'warning');
+            return;
+        }
+        this.operatorEmpId = empId;
+
         if (source === dest) {
             this.showToast('Source and Destination branches cannot be the same.', 'warning');
             return;
@@ -2122,6 +2288,7 @@ const app = {
             dispatchDate: dispatchDate.toISOString(),
             expectedDeliveryDate: etaDate.toISOString(),
             status: 'CREATED',
+            createdBy: empId,
             checklists: {
                 dispatch: { loaded: false, verified: false, vehicleReady: false, driverAvailable: false },
                 delivery: { quantityMatches: false, damagesChecked: false, missingChecked: false, conditionOk: false }
@@ -2156,6 +2323,13 @@ const app = {
         const loc = document.getElementById('call-location').value;
         const notes = document.getElementById('call-notes').value;
 
+        const empId = document.getElementById('call-emp-id').value.trim();
+        if (!empId) {
+            this.showToast('Operator Employee ID is required to log this call.', 'warning');
+            return;
+        }
+        this.operatorEmpId = empId;
+
         const trip = LCOS_State.getTripById(tripId);
         if (!trip) return;
 
@@ -2164,7 +2338,7 @@ const app = {
             type: category,
             caller: caller === 'Driver' ? `Driver (${LCOS_State.getDrivers().find(d => d.id === trip.driverId)?.name || 'Driver'})` : caller,
             recipient: caller === 'Driver' ? 'Admin Office' : 'Driver/Manager',
-            notes: `Location: ${loc || '--'}. notes: ${notes}`
+            notes: `Location: ${loc || '--'}. Operator: ${empId}. Notes: ${notes}`
         });
 
         // If location is provided, log update
@@ -2176,7 +2350,8 @@ const app = {
                 condition: 'Good',
                 status: trip.status,
                 delayReason: '',
-                remarks: notes
+                remarks: notes,
+                operatorId: empId
             });
             trip.lastUpdateTimestamp = simTime;
             LCOS_State.save();
