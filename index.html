@@ -162,6 +162,34 @@
                                 <span>Tamil Nadu - Logistics Network Map</span>
                                 <span style="font-size: 0.8rem; color: var(--text-muted);">14 District Branches</span>
                             </div>
+                            
+                            <!-- Map Filters Header -->
+                            <div class="map-filters-header" style="display:flex; justify-content:space-between; align-items:center; gap:0.5rem; padding:0.75rem 1rem; border-bottom:1px solid var(--border-glass); background:rgba(255,255,255,0.02); flex-wrap:wrap; margin-bottom: 0.75rem;">
+                                <div style="display:flex; align-items:center; gap:0.5rem; flex-wrap:wrap;">
+                                    <label class="form-label" style="margin:0; font-size:0.75rem; color:var(--text-muted);">Timeframe:</label>
+                                    <select class="form-control" id="map-filter-timeframe" style="width:130px; font-size:0.75rem; padding:0.25rem 0.5rem; height:auto; background:var(--bg-glass);">
+                                        <option value="today" selected>Today</option>
+                                        <option value="weekly">Weekly (7 Days)</option>
+                                        <option value="monthly">Monthly (30 Days)</option>
+                                        <option value="yearly">Yearly (365 Days)</option>
+                                        <option value="custom">Custom Range</option>
+                                    </select>
+                                    
+                                    <!-- Custom Date Picker Wrappers -->
+                                    <div id="map-custom-dates-wrap" style="display:none; align-items:center; gap:0.25rem;">
+                                        <input type="date" class="form-control" id="map-date-start" style="font-size:0.75rem; padding:0.25rem 0.4rem; height:auto; width:115px; background:var(--bg-glass);">
+                                        <span style="color:var(--text-muted); font-size:0.75rem;">to</span>
+                                        <input type="date" class="form-control" id="map-date-end" style="font-size:0.75rem; padding:0.25rem 0.4rem; height:auto; width:115px; background:var(--bg-glass);">
+                                    </div>
+                                </div>
+                                
+                                <div style="display:flex; align-items:center; gap:0.5rem;">
+                                    <label class="form-label" style="margin:0; font-size:0.75rem; color:var(--text-muted);">Running Truck:</label>
+                                    <select class="form-control" id="map-filter-vehicle" style="width:160px; font-size:0.75rem; padding:0.25rem 0.5rem; height:auto; background:var(--bg-glass);">
+                                        <option value="">-- All Running Trucks --</option>
+                                    </select>
+                                </div>
+                            </div>
                             <div class="map-visualizer">
                                 <div class="map-tooltip" id="map-tip">Chennai Branch</div>
                                 <svg class="map-svg-container" id="tn-map-svg" viewBox="0 0 100 100">

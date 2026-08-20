@@ -268,7 +268,23 @@ const app = {
         document.getElementById('call-search').addEventListener('input', () => this.renderCallLogs());
         document.getElementById('call-filter-type').addEventListener('change', () => this.renderCallLogs());
 
+        // Map Timeframe Filter change
+        document.getElementById('map-filter-timeframe')?.addEventListener('change', (e) => {
+            const wrap = document.getElementById('map-custom-dates-wrap');
+            if (wrap) {
+                wrap.style.display = e.target.value === 'custom' ? 'inline-flex' : 'none';
+            }
+            this.updateMapReport();
+        });
 
+        // Map Custom dates changes
+        document.getElementById('map-date-start')?.addEventListener('change', () => this.updateMapReport());
+        document.getElementById('map-date-end')?.addEventListener('change', () => this.updateMapReport());
+
+        // Map Vehicle selection change
+        document.getElementById('map-filter-vehicle')?.addEventListener('change', () => {
+            this.updateMapHighlights();
+        });
     },
 
     setupSimulation() {
@@ -551,8 +567,8 @@ const app = {
             reqBox.style.display = 'none';
         }
 
-        // 6. Update Map active routes
-        this.updateMapHighlights();
+        // 6. Update Map active routes & reports
+        this.updateMapReport();
     },
 
     renderDashboardCharts() {
@@ -1765,13 +1781,101 @@ const app = {
         });
     },
 
+    getFilteredTrips() {
+        const timeframe = document.getElementById('map-filter-timeframe')?.value || 'today';
+        const trips = LCOS_State.getTrips();
+        const now = new Date();
+        
+        let startBound = new Date();
+        let endBound = new Date();
+        
+        if (timeframe === 'today') {
+            startBound.setHours(0, 0, 0, 0);
+            endBound.setHours(23, 59, 59, 999);
+        } else if (timeframe === 'weekly') {
+            startBound.setDate(now.getDate() - 7);
+            startBound.setHours(0, 0, 0, 0);
+            endBound.setHours(23, 59, 59, 999);
+        } else if (timeframe === 'monthly') {
+            startBound.setDate(now.getDate() - 30);
+            startBound.setHours(0, 0, 0, 0);
+            endBound.setHours(23, 59, 59, 999);
+        } else if (timeframe === 'yearly') {
+            startBound.setDate(now.getDate() - 365);
+            startBound.setHours(0, 0, 0, 0);
+            endBound.setHours(23, 59, 59, 999);
+        } else if (timeframe === 'custom') {
+            const startVal = document.getElementById('map-date-start')?.value;
+            const endVal = document.getElementById('map-date-end')?.value;
+            
+            if (startVal) {
+                startBound = new Date(startVal);
+                startBound.setHours(0, 0, 0, 0);
+            } else {
+                startBound = new Date(0);
+            }
+            
+            if (endVal) {
+                endBound = new Date(endVal);
+                endBound.setHours(23, 59, 59, 999);
+            } else {
+                endBound = new Date();
+            }
+        }
+        
+        return trips.filter(t => {
+            const tripDate = new Date(t.lastUpdateTimestamp);
+            return tripDate >= startBound && tripDate <= endBound;
+        });
+    },
+
+    updateMapReport() {
+        const filteredTrips = this.getFilteredTrips();
+        const vehSelect = document.getElementById('map-filter-vehicle');
+        if (!vehSelect) return;
+        
+        const prevSelected = vehSelect.value;
+        vehSelect.innerHTML = '<option value="">-- All Running Trucks --</option>';
+        
+        filteredTrips.forEach(t => {
+            const statusLabel = t.status === 'CLOSED' ? 'Delivered' : t.status === 'RETURNING' ? 'Returning' : 'In Transit';
+            vehSelect.innerHTML += `<option value="${t.id}">${t.vehicleId} (${statusLabel})</option>`;
+        });
+        
+        if (Array.from(vehSelect.options).some(opt => opt.value === prevSelected)) {
+            vehSelect.value = prevSelected;
+        }
+        
+        this.updateMapHighlights();
+    },
+
     updateMapHighlights() {
         // Reset all lines and nodes
         document.querySelectorAll('.map-connection').forEach(l => l.classList.remove('active-path'));
         document.querySelectorAll('.map-node').forEach(n => n.classList.remove('active-route'));
 
-        // If there's an active selected trip in Console, highlight its route
-        if (this.activeConsoleTripId && this.activeTab === 'operations') {
+        const selectedVehTripId = document.getElementById('map-filter-vehicle')?.value;
+
+        if (this.activeTab === 'dashboard') {
+            const filteredTrips = this.getFilteredTrips();
+            
+            filteredTrips.forEach(trip => {
+                // If a specific vehicle is selected, highlight only that one. Otherwise highlight all active/returning/closed matching!
+                if (!selectedVehTripId || trip.id === selectedVehTripId) {
+                    if (trip.status !== 'COMPLETED_RETURN') {
+                        const nodeSrc = document.getElementById(`node-${trip.sourceBranchId}`);
+                        const nodeDest = document.getElementById(`node-${trip.destinationBranchId}`);
+                        
+                        if (nodeSrc) nodeSrc.classList.add('active-route');
+                        if (nodeDest) nodeDest.classList.add('active-route');
+
+                        let line = document.getElementById(`conn-${trip.sourceBranchId}-${trip.destinationBranchId}`) ||
+                                   document.getElementById(`conn-${trip.destinationBranchId}-${trip.sourceBranchId}`);
+                        if (line) line.classList.add('active-path');
+                    }
+                }
+            });
+        } else if (this.activeConsoleTripId && this.activeTab === 'operations') {
             const trip = LCOS_State.getTripById(this.activeConsoleTripId);
             if (trip && trip.status !== 'CLOSED') {
                 const nodeSrc = document.getElementById(`node-${trip.sourceBranchId}`);
@@ -1780,13 +1884,9 @@ const app = {
                 if (nodeSrc) nodeSrc.classList.add('active-route');
                 if (nodeDest) nodeDest.classList.add('active-route');
 
-                // Find connecting line
                 let line = document.getElementById(`conn-${trip.sourceBranchId}-${trip.destinationBranchId}`) ||
                            document.getElementById(`conn-${trip.destinationBranchId}-${trip.sourceBranchId}`);
-                
-                if (line) {
-                    line.classList.add('active-path');
-                }
+                if (line) line.classList.add('active-path');
             }
         }
     },
