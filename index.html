@@ -99,10 +99,6 @@
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
                         New Trip Dispatch
                     </button>
-                    <button class="btn btn-secondary" id="btn-toggle-sim" title="Toggle Simulator Panel">
-                        <span>Simulator Panel</span>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><line x1="9" y1="3" x2="9" y2="21"></line></svg>
-                    </button>
                 </div>
             </header>
 
@@ -654,58 +650,7 @@
             </div>
         </main>
 
-        <!-- Right Side Panel: Simulator & Heartbeat Simulation Control -->
-        <aside class="sim-panel" id="simulator-panel">
-            <div class="sim-header">
-                <h3>🛠️ LCOS Simulator Panel</h3>
-                <button class="modal-close" id="btn-close-sim" style="font-size: 1.25rem;">×</button>
-            </div>
-            
-            <div class="sim-body">
-                <!-- 1. Simulator Status -->
-                <div class="sim-card">
-                    <div class="sim-title">
-                        <span>Heartbeat Simulator</span>
-                        <span id="sim-status-label" class="text-success" style="font-size:0.75rem;">RUNNING</span>
-                    </div>
-                    <button class="btn btn-secondary w-100" id="btn-toggle-sim-run">Pause Simulator Time</button>
-                </div>
-                
-                <!-- 2. Simulation Speed -->
-                <div class="sim-card">
-                    <div class="sim-title">
-                        <span>Simulation Speed</span>
-                        <span id="sim-speed-label">60x (1s = 1min)</span>
-                    </div>
-                    <input type="range" class="form-control" id="sim-speed-slider" min="1" max="300" value="60" style="margin-bottom:0.5rem; accent-color:var(--color-warning);">
-                    <p style="font-size:0.7rem; color:var(--text-muted);">Increase speed to quickly trigger missing update alerts and delay events.</p>
-                </div>
-                
-                <!-- 3. Immediate Event Injectors -->
-                <div class="sim-card">
-                    <div class="sim-title">Inject Event</div>
-                    <div style="display:flex; flex-direction:column; gap:0.5rem;">
-                        <button class="btn btn-secondary w-100" id="btn-sim-trigger-call" style="font-size:0.8rem; text-align:left;">
-                            📞 Force Driver Check-in Call
-                        </button>
-                        <button class="btn btn-secondary w-100" id="btn-sim-trigger-breakdown" style="font-size:0.8rem; text-align:left;">
-                            ⚠️ Force Vehicle Breakdown
-                        </button>
-                        <button class="btn btn-secondary w-100" id="btn-sim-trigger-escalation" style="font-size:0.8rem; text-align:left;">
-                            🚨 Force Missed Update (Unreachable)
-                        </button>
-                    </div>
-                </div>
 
-                <!-- 4. Reset Button -->
-                <div class="sim-card" style="border-color: rgba(239, 68, 68, 0.2); margin-top: auto;">
-                    <div class="sim-title text-danger">Danger Zone</div>
-                    <button class="btn btn-danger w-100" id="btn-reset-db" style="font-size:0.8rem;">
-                        ⚠️ Reset Simulation Data
-                    </button>
-                </div>
-            </div>
-        </aside>
     </div>
 
     <!-- TOASTS CONTAINER -->
@@ -948,7 +893,6 @@
 
     <!-- SCRIPTS -->
     <script type="module" src="/js/state.js"></script>
-    <script type="module" src="/js/simulation.js"></script>
     <script type="module" src="/js/charts.js"></script>
     <script type="module" src="/js/app.js"></script>
 </body>
