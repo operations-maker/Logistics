@@ -1744,38 +1744,76 @@ const app = {
     renderMap() {
         const svg = document.getElementById('tn-map-svg');
         if (!svg) return;
-        svg.innerHTML = '';
 
-        // Coastline outline coordinates (abstract Tamil Nadu outline matching viewbox 100x100)
-        svg.innerHTML += `
+        let html = `
             <polygon points="70,10 85,15 82,25 74,38 78,50 78,56 70,68 62,75 50,86 42,92 35,95 28,95 32,85 28,75 22,65 15,58 15,48 25,45 35,38 42,32 50,28 62,20 68,10" 
                 fill="#0b111e" stroke="rgba(99,102,241,0.15)" stroke-width="1.5" />
         `;
 
         const branches = LCOS_State.getBranches();
 
-        // Build grid of dotted connections
+        // Build grid of dotted background lanes
         for (let i = 0; i < branches.length; i++) {
             for (let j = i + 1; j < branches.length; j++) {
                 const b1 = branches[i];
                 const b2 = branches[j];
-                // Only link connections within reasonable distance to keep map clean
                 const dist = Math.hypot(b1.x - b2.x, b1.y - b2.y);
                 if (dist < 40) {
-                    svg.innerHTML += `
+                    html += `
                         <line x1="${b1.x}" y1="${b1.y}" x2="${b2.x}" y2="${b2.y}" 
-                            class="map-connection" id="conn-${b1.id}-${b2.id}" />
+                            stroke="rgba(255,255,255,0.03)" stroke-width="1" stroke-dasharray="1 2" />
                     `;
                 }
             }
         }
 
-        // Draw Branch Dots (static anchors, no district clicks)
+        // Draw very faint reference dots for warehouse bases
         branches.forEach(b => {
-            svg.innerHTML += `
-                <circle cx="${b.x}" cy="${b.y}" r="3.5" class="map-node" id="node-${b.id}" />
+            html += `
+                <circle cx="${b.x}" cy="${b.y}" r="1.5" fill="rgba(255,255,255,0.1)" />
             `;
         });
+
+        this.mapBaseHTML = html;
+        svg.innerHTML = html;
+    },
+
+    getTripCurrentCoordinates(trip) {
+        const src = LCOS_State.getBranches().find(b => b.id === trip.sourceBranchId);
+        const dest = LCOS_State.getBranches().find(b => b.id === trip.destinationBranchId);
+        if (!src || !dest) return { x: 50, y: 50 };
+
+        const startStatuses = ['CREATED', 'DISPATCH_APPROVED', 'DRIVER_CALLED', 'DRIVER_CONFIRMED'];
+        if (startStatuses.includes(trip.status)) {
+            return { x: src.x, y: src.y };
+        }
+
+        if (trip.status === 'CLOSED' || trip.status === 'COMPLETED_RETURN') {
+            return { x: dest.x, y: dest.y };
+        }
+
+        // Calculate transit progress based on real date diff
+        const startTime = new Date(trip.lastUpdateTimestamp).getTime();
+        const nowTime = new Date(LCOS_State.getSystemSettings().simulationTime).getTime();
+        const expectedMs = (trip.expectedHours || 8) * 60 * 60 * 1000;
+        const elapsedMs = Math.max(0, nowTime - startTime);
+
+        let progress = Math.min(0.9, elapsedMs / expectedMs);
+        if (trip.status === 'ARRIVED') progress = 1.0;
+
+        if (trip.status === 'RETURNING') {
+            // Returning empty travels back to origin home base
+            return {
+                x: dest.x + progress * (src.x - dest.x),
+                y: dest.y + progress * (src.y - dest.y)
+            };
+        } else {
+            // Forward transit travels towards destination
+            return {
+                x: src.x + progress * (dest.x - src.x),
+                y: src.y + progress * (dest.y - src.y)
+            };
+        }
     },
 
     getFilteredTrips() {
@@ -1847,14 +1885,12 @@ const app = {
     },
 
     updateMapHighlights() {
-        // Reset all lines and nodes
-        document.querySelectorAll('.map-connection').forEach(l => {
-            l.classList.remove('active-path');
-            l.style.strokeWidth = "";
-            l.onmouseover = null;
-            l.onmouseout = null;
-        });
-        document.querySelectorAll('.map-node').forEach(n => n.classList.remove('active-route'));
+        const svg = document.getElementById('tn-map-svg');
+        if (!svg) return;
+
+        // Reset map to background coastline
+        svg.innerHTML = this.mapBaseHTML || '';
+        this.hideMapTooltip();
 
         const selectedVehTripId = document.getElementById('map-filter-vehicle')?.value;
 
@@ -1864,54 +1900,93 @@ const app = {
             filteredTrips.forEach(trip => {
                 if (!selectedVehTripId || trip.id === selectedVehTripId) {
                     if (trip.status !== 'COMPLETED_RETURN') {
-                        const nodeSrc = document.getElementById(`node-${trip.sourceBranchId}`);
-                        const nodeDest = document.getElementById(`node-${trip.destinationBranchId}`);
+                        const bSrc = LCOS_State.getBranches().find(b => b.id === trip.sourceBranchId);
+                        const bDest = LCOS_State.getBranches().find(b => b.id === trip.destinationBranchId);
                         
-                        if (nodeSrc) nodeSrc.classList.add('active-route');
-                        if (nodeDest) nodeDest.classList.add('active-route');
-
-                        let line = document.getElementById(`conn-${trip.sourceBranchId}-${trip.destinationBranchId}`) ||
-                                   document.getElementById(`conn-${trip.destinationBranchId}-${trip.sourceBranchId}`);
-                        if (line) {
-                            line.classList.add('active-path');
-
-                            const bSrc = LCOS_State.getBranches().find(b => b.id === trip.sourceBranchId);
-                            const bDest = LCOS_State.getBranches().find(b => b.id === trip.destinationBranchId);
-                            if (bSrc && bDest) {
-                                const midX = (bSrc.x + bDest.x) / 2;
-                                const midY = (bSrc.y + bDest.y) / 2;
-
-                                const lastUpdate = trip.transitUpdates[trip.transitUpdates.length - 1];
-                                const lastLoc = lastUpdate ? lastUpdate.location : 'Origin Gate';
-                                const statusLabel = trip.status === 'CLOSED' ? 'Delivered' : trip.status === 'RETURNING' ? 'Returning' : 'In Transit';
-                                const reportText = `Vehicle: ${trip.vehicleId} | Status: ${statusLabel} | Current Location: ${lastLoc}`;
-
-                                line.onmouseover = (e) => {
-                                    this.showMapTooltip(reportText, midX, midY);
-                                    line.style.strokeWidth = "3px";
-                                    line.style.cursor = "pointer";
-                                };
-                                line.onmouseout = () => {
-                                    this.hideMapTooltip();
-                                    line.style.strokeWidth = "";
-                                };
-                            }
+                        // 1. Draw transit route lane highlight
+                        if (bSrc && bDest) {
+                            const routeLine = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                            routeLine.setAttribute("x1", bSrc.x);
+                            routeLine.setAttribute("y1", bSrc.y);
+                            routeLine.setAttribute("x2", bDest.x);
+                            routeLine.setAttribute("y2", bDest.y);
+                            routeLine.setAttribute("class", "map-connection active-path");
+                            
+                            // Yellow-red for delayed, indigo for healthy
+                            routeLine.style.stroke = trip.status === 'DELAYED' ? '#f59e0b' : '#6366f1';
+                            routeLine.style.strokeWidth = "2.5px";
+                            routeLine.style.opacity = "0.75";
+                            svg.appendChild(routeLine);
                         }
+
+                        // 2. Draw live GPS coordinate dot of vehicle
+                        const pos = this.getTripCurrentCoordinates(trip);
+                        let dotColor = '#38bdf8'; // sky blue for moving
+                        if (trip.status === 'DELAYED') dotColor = '#ef4444'; // red for delayed
+                        if (trip.status === 'CLOSED') dotColor = '#10b981'; // green for delivered
+                        if (trip.status === 'RETURNING') dotColor = '#a855f7'; // purple for return leg
+
+                        // Pulsing ring
+                        const ring = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                        ring.setAttribute("cx", pos.x);
+                        ring.setAttribute("cy", pos.y);
+                        ring.setAttribute("r", "5.5");
+                        ring.setAttribute("fill", "none");
+                        ring.setAttribute("stroke", dotColor);
+                        ring.setAttribute("stroke-width", "0.75");
+                        ring.setAttribute("opacity", "0.6");
+                        svg.appendChild(ring);
+
+                        // Solid truck dot
+                        const dot = document.createElementNS("http://www.w3.org/2000/svg", "circle");
+                        dot.setAttribute("cx", pos.x);
+                        dot.setAttribute("cy", pos.y);
+                        dot.setAttribute("r", "3.2");
+                        dot.setAttribute("fill", dotColor);
+                        dot.style.cursor = "pointer";
+                        dot.style.filter = `drop-shadow(0px 0px 4px ${dotColor})`;
+                        svg.appendChild(dot);
+
+                        // Build hover report content
+                        const lastUpdate = trip.transitUpdates[trip.transitUpdates.length - 1];
+                        const lastLoc = lastUpdate ? lastUpdate.location : 'Origin Warehouse Gate';
+                        const statusLabel = trip.status === 'CLOSED' ? 'Delivered' : trip.status === 'RETURNING' ? 'Returning Empty' : 'In Transit';
+                        const com = LCOS_State.getCommodities().find(c => c.id === trip.commodityId);
+                        const cargoDesc = com ? `${com.name} (${trip.quantity} ${com.unit})` : 'Commodity';
+                        const hoverReport = `Vehicle: ${trip.vehicleId} | Cargo: ${cargoDesc} | Status: ${statusLabel} | Current Location: ${lastLoc}`;
+
+                        const onMouseOver = () => {
+                            this.showMapTooltip(hoverReport, pos.x, pos.y);
+                            dot.setAttribute("r", "4.8");
+                            ring.setAttribute("r", "8");
+                        };
+
+                        const onMouseOut = () => {
+                            this.hideMapTooltip();
+                            dot.setAttribute("r", "3.2");
+                            ring.setAttribute("r", "5.5");
+                        };
+
+                        dot.onmouseover = onMouseOver;
+                        dot.onmouseout = onMouseOut;
                     }
                 }
             });
         } else if (this.activeConsoleTripId && this.activeTab === 'operations') {
             const trip = LCOS_State.getTripById(this.activeConsoleTripId);
             if (trip && trip.status !== 'CLOSED') {
-                const nodeSrc = document.getElementById(`node-${trip.sourceBranchId}`);
-                const nodeDest = document.getElementById(`node-${trip.destinationBranchId}`);
+                const bSrc = LCOS_State.getBranches().find(b => b.id === trip.sourceBranchId);
+                const bDest = LCOS_State.getBranches().find(b => b.id === trip.destinationBranchId);
                 
-                if (nodeSrc) nodeSrc.classList.add('active-route');
-                if (nodeDest) nodeDest.classList.add('active-route');
-
-                let line = document.getElementById(`conn-${trip.sourceBranchId}-${trip.destinationBranchId}`) ||
-                           document.getElementById(`conn-${trip.destinationBranchId}-${trip.sourceBranchId}`);
-                if (line) line.classList.add('active-path');
+                if (bSrc && bDest) {
+                    const routeLine = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                    routeLine.setAttribute("x1", bSrc.x);
+                    routeLine.setAttribute("y1", bSrc.y);
+                    routeLine.setAttribute("x2", bDest.x);
+                    routeLine.setAttribute("y2", bDest.y);
+                    routeLine.setAttribute("class", "map-connection active-path");
+                    svg.appendChild(routeLine);
+                }
             }
         }
     },
