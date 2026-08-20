@@ -1770,13 +1770,10 @@ const app = {
             }
         }
 
-        // Draw Branch Dots
+        // Draw Branch Dots (static anchors, no district clicks)
         branches.forEach(b => {
             svg.innerHTML += `
-                <circle cx="${b.x}" cy="${b.y}" r="4.5" class="map-node" id="node-${b.id}"
-                    onmouseover="app.showMapTooltip('${b.name} Branch', ${b.x}, ${b.y})" 
-                    onmouseout="app.hideMapTooltip()"
-                    onclick="app.handleMapNodeClick('${b.id}')" />
+                <circle cx="${b.x}" cy="${b.y}" r="3.5" class="map-node" id="node-${b.id}" />
             `;
         });
     },
@@ -1851,7 +1848,12 @@ const app = {
 
     updateMapHighlights() {
         // Reset all lines and nodes
-        document.querySelectorAll('.map-connection').forEach(l => l.classList.remove('active-path'));
+        document.querySelectorAll('.map-connection').forEach(l => {
+            l.classList.remove('active-path');
+            l.style.strokeWidth = "";
+            l.onmouseover = null;
+            l.onmouseout = null;
+        });
         document.querySelectorAll('.map-node').forEach(n => n.classList.remove('active-route'));
 
         const selectedVehTripId = document.getElementById('map-filter-vehicle')?.value;
@@ -1860,7 +1862,6 @@ const app = {
             const filteredTrips = this.getFilteredTrips();
             
             filteredTrips.forEach(trip => {
-                // If a specific vehicle is selected, highlight only that one. Otherwise highlight all active/returning/closed matching!
                 if (!selectedVehTripId || trip.id === selectedVehTripId) {
                     if (trip.status !== 'COMPLETED_RETURN') {
                         const nodeSrc = document.getElementById(`node-${trip.sourceBranchId}`);
@@ -1871,7 +1872,31 @@ const app = {
 
                         let line = document.getElementById(`conn-${trip.sourceBranchId}-${trip.destinationBranchId}`) ||
                                    document.getElementById(`conn-${trip.destinationBranchId}-${trip.sourceBranchId}`);
-                        if (line) line.classList.add('active-path');
+                        if (line) {
+                            line.classList.add('active-path');
+
+                            const bSrc = LCOS_State.getBranches().find(b => b.id === trip.sourceBranchId);
+                            const bDest = LCOS_State.getBranches().find(b => b.id === trip.destinationBranchId);
+                            if (bSrc && bDest) {
+                                const midX = (bSrc.x + bDest.x) / 2;
+                                const midY = (bSrc.y + bDest.y) / 2;
+
+                                const lastUpdate = trip.transitUpdates[trip.transitUpdates.length - 1];
+                                const lastLoc = lastUpdate ? lastUpdate.location : 'Origin Gate';
+                                const statusLabel = trip.status === 'CLOSED' ? 'Delivered' : trip.status === 'RETURNING' ? 'Returning' : 'In Transit';
+                                const reportText = `Vehicle: ${trip.vehicleId} | Status: ${statusLabel} | Current Location: ${lastLoc}`;
+
+                                line.onmouseover = (e) => {
+                                    this.showMapTooltip(reportText, midX, midY);
+                                    line.style.strokeWidth = "3px";
+                                    line.style.cursor = "pointer";
+                                };
+                                line.onmouseout = () => {
+                                    this.hideMapTooltip();
+                                    line.style.strokeWidth = "";
+                                };
+                            }
+                        }
                     }
                 }
             });
@@ -1894,22 +1919,23 @@ const app = {
     showMapTooltip(text, x, y) {
         const tip = document.getElementById('map-tip');
         if (!tip) return;
-        tip.textContent = text;
+        tip.innerHTML = text.replace(/ \| /g, '<br>');
         tip.style.display = 'block';
-        tip.style.left = `${x + 12}%`;
-        tip.style.top = `${y - 12}%`;
+        tip.style.left = `${x}%`;
+        tip.style.top = `${y - 6}%`;
+        tip.style.transform = 'translate(-50%, -50%)';
     },
 
     hideMapTooltip() {
         const tip = document.getElementById('map-tip');
-        if (tip) tip.style.display = 'none';
+        if (tip) {
+            tip.style.display = 'none';
+            tip.style.transform = '';
+        }
     },
 
     handleMapNodeClick(branchId) {
-        const branch = LCOS_State.getBranches().find(b => b.id === branchId);
-        if (branch) {
-            this.showToast(`Branch: ${branch.name} | Manager: ${branch.manager} | Phone: ${branch.phone}`, 'info');
-        }
+        // District clicks are disabled for routes only map view
     },
 
     // --- Modal Handling ---
