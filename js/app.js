@@ -354,8 +354,8 @@ const app = {
             appContainer.style.opacity = '0';
             appContainer.style.transition = 'opacity 0.4s ease';
             
-            this.renderAll();
             this.renderMap();
+            this.renderAll();
             
             setTimeout(() => {
                 appContainer.style.opacity = '1';
