@@ -64,13 +64,7 @@ const app = {
             });
         });
 
-        // Toggle simulator panel
-        document.getElementById('btn-toggle-sim').addEventListener('click', () => {
-            document.getElementById('simulator-panel').classList.toggle('collapsed');
-        });
-        document.getElementById('btn-close-sim').addEventListener('click', () => {
-            document.getElementById('simulator-panel').classList.add('collapsed');
-        });
+
 
         // Quick create trip dispatch button
         document.getElementById('btn-quick-trip').addEventListener('click', () => {
@@ -274,139 +268,28 @@ const app = {
         document.getElementById('call-search').addEventListener('input', () => this.renderCallLogs());
         document.getElementById('call-filter-type').addEventListener('change', () => this.renderCallLogs());
 
-        // Simulator controls
-        document.getElementById('btn-toggle-sim-run').addEventListener('click', (e) => {
-            const settings = LCOS_State.getSystemSettings();
-            settings.isSimulating = !settings.isSimulating;
-            LCOS_State.save();
-            
-            if (settings.isSimulating) {
-                LCOS_Sim.start();
-                e.target.textContent = 'Pause Simulator Time';
-                e.target.classList.remove('btn-success');
-                document.getElementById('sim-status-label').textContent = 'RUNNING';
-                document.getElementById('sim-status-label').className = 'text-success';
-                this.showToast('Heartbeat simulator resumed.', 'success');
-            } else {
-                LCOS_Sim.stop();
-                e.target.textContent = 'Resume Simulator Time';
-                e.target.classList.add('btn-success');
-                document.getElementById('sim-status-label').textContent = 'PAUSED';
-                document.getElementById('sim-status-label').className = 'text-warning';
-                this.showToast('Heartbeat simulator paused.', 'warning');
-            }
-        });
 
-        document.getElementById('sim-speed-slider').addEventListener('input', (e) => {
-            const speed = Number(e.target.value);
-            const settings = LCOS_State.getSystemSettings();
-            settings.simulationSpeed = speed;
-            LCOS_State.save();
-            document.getElementById('sim-speed-label').textContent = `${speed}x (1s = ${speed} min${speed > 1 ? 's' : ''})`;
-        });
-
-        // Simulator Event Injectors
-        document.getElementById('btn-sim-trigger-call').addEventListener('click', () => {
-            // Pick random in-transit trip and force incoming call alert
-            const transitTrips = LCOS_State.getTrips().filter(t => t.status === 'IN_TRANSIT');
-            if (transitTrips.length === 0) {
-                this.showToast('No active trips in transit to simulate check-in call.', 'warning');
-                return;
-            }
-            const trip = transitTrips[Math.floor(Math.random() * transitTrips.length)];
-            const driver = LCOS_State.getDrivers().find(d => d.id === trip.driverId);
-            
-            const alert = LCOS_State.addAlert({
-                tripId: trip.id,
-                type: 'Incoming Call',
-                message: `Incoming Check-in Call from Driver ${driver ? driver.name : 'Unknown'} (Trip ${trip.id})`,
-                severity: 'info'
-            });
-            this.renderDashboard();
-            this.showToast('Simulated incoming call injected.', 'info');
-        });
-
-        document.getElementById('btn-sim-trigger-breakdown').addEventListener('click', () => {
-            const transitTrips = LCOS_State.getTrips().filter(t => t.status === 'IN_TRANSIT');
-            if (transitTrips.length === 0) {
-                this.showToast('No active trips in transit to simulate breakdown.', 'warning');
-                return;
-            }
-            const trip = transitTrips[Math.floor(Math.random() * transitTrips.length)];
-            trip.status = 'DELAYED';
-            const simTime = LCOS_State.getSystemSettings().simulationTime;
-            trip.transitUpdates.push({
-                timestamp: simTime,
-                location: 'Bypass Highway',
-                condition: 'Minor Issue',
-                status: 'DELAYED',
-                delayReason: 'Breakdown',
-                remarks: 'Engine temperature indicator warning high. Forced stop.'
-            });
-            trip.lastUpdateTimestamp = simTime;
-
-            const alert = LCOS_State.addAlert({
-                tripId: trip.id,
-                type: 'Breakdown',
-                message: `ALERT: Trip ${trip.id} report Breakdown on Highway. Check status.`,
-                severity: 'danger'
-            });
-            LCOS_State.save();
-            this.renderAll();
-            this.showToast('Simulated vehicle breakdown injected.', 'danger');
-        });
-
-        document.getElementById('btn-sim-trigger-escalation').addEventListener('click', () => {
-            const transitTrips = LCOS_State.getTrips().filter(t => t.status === 'IN_TRANSIT');
-            if (transitTrips.length === 0) {
-                this.showToast('No active trips in transit to simulate heartbeat loss.', 'warning');
-                return;
-            }
-            const trip = transitTrips[Math.floor(Math.random() * transitTrips.length)];
-            const driver = LCOS_State.getDrivers().find(d => d.id === trip.driverId);
-
-            const alert = LCOS_State.addAlert({
-                tripId: trip.id,
-                type: 'Unreachable',
-                message: `SYSTEM DETECTED: GPS link simulation heartbeat lost for Trip ${trip.id} (Driver ${driver ? driver.name : 'Unknown'})`,
-                severity: 'danger'
-            });
-            this.renderDashboard();
-            this.showToast('Simulated unreachable warning injected.', 'danger');
-        });
-
-        // Reset database button
-        document.getElementById('btn-reset-db').addEventListener('click', () => {
-            if (confirm('Are you sure you want to reset all simulation data to pre-seeded defaults? This will erase all newly created trips, registered drivers, and call logs.')) {
-                LCOS_State.resetToDefaults();
-                this.activeConsoleTripId = null;
-                this.renderAll();
-                this.renderMap();
-                this.showToast('Logistics Operations database reset to defaults.', 'success');
-            }
-        });
     },
 
     setupSimulation() {
-        // Setup clock sync
-        LCOS_Sim.registerOnClockTick((simTimeISO) => {
-            const date = new Date(simTimeISO);
-            
-            // Format time: 04 Aug 2026, 08:00 AM
+        // Setup real computer clock sync (Simulator is removed)
+        const updateClock = () => {
+            const date = new Date();
             const options = { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true };
             const formatted = date.toLocaleDateString('en-US', options).replace(',', '');
             
-            document.getElementById('sim-clock-display').textContent = formatted;
-
-            // Do not re-render active panels on every tick to prevent 
-            // dropdowns/input fields from auto-closing while user is typing.
-        });
-
-        // Setup alert response triggers
-        LCOS_Sim.registerOnAlertTriggered((alert) => {
-            this.showToast(alert.message, alert.severity === 'danger' ? 'danger' : alert.severity === 'warning' ? 'warning' : 'info');
-            this.renderDashboard();
-        });
+            const clockDisplay = document.getElementById('sim-clock-display');
+            if (clockDisplay) clockDisplay.textContent = formatted;
+            
+            // Set the state's simulationTime to the actual real date ISO string
+            // so that all dispatches and logs receive real timestamps!
+            const settings = LCOS_State.getSystemSettings();
+            settings.simulationTime = date.toISOString();
+            LCOS_State.save();
+        };
+        
+        updateClock();
+        setInterval(updateClock, 1000);
     },
 
     switchTab(tabId) {
